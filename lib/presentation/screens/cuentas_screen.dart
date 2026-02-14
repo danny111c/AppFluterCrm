@@ -25,10 +25,9 @@ import '../widgets/notifications/notification_service.dart';
 import 'package:shimmer/shimmer.dart'; // <-- 1. IMPORTAR SHIMMER
 import '../widgets/modals/gestionar_perfiles_modal.dart';
 import '../../domain/providers/venta_provider.dart';
-import '../../domain/providers/venta_provider.dart';
 import '../../infrastructure/repositories/transacciones_repository.dart';
 import '../widgets/dialogs/dialogo_procesar_devolucion.dart';
-
+import '../widgets/dialogs/gestionar_incidencias_dialog.dart';
 class CuentasScreen extends ConsumerStatefulWidget {
   const CuentasScreen({super.key});
 
@@ -378,36 +377,54 @@ if (cuentasState.isLoading && cuentasState.cuentas.isEmpty) {
   ),
 ),
       'Fecha Inicio': Text(cuenta.fechaInicio != null ? DateFormat('dd-MM-yyyy').format(DateTime.parse(cuenta.fechaInicio!)) : 'N/A'),
-      'Días Restantes': Text(
+      // REEMPLAZA LA LÍNEA DE 'Días Restantes' EN CUENTAS SCREEN CON ESTO:
+'Días Restantes': cuenta.isPaused 
+    ? Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.amber.withOpacity(0.5)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pause_circle_filled, size: 12, color: Colors.amber),
+            SizedBox(width: 4),
+            Text(
+              "PAUSADO",
+              style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 10),
+            ),
+          ],
+        ),
+      )
+    : Text(
         cuenta.diasRestantes.toString(),
-        style: TextStyle(color: _getColorDiasRestantes(cuenta.diasRestantes), fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: _getColorDiasRestantes(cuenta.diasRestantes), 
+          fontWeight: FontWeight.bold
+        ),
       ),
       'Final': Text(cuenta.fechaFinal != null ? DateFormat('dd-MM-yyyy').format(DateTime.parse(cuenta.fechaFinal!)) : 'N/A'),
       'Acciones': Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(icon: const Icon(Icons.message, color: Colors.green), tooltip: 'Contactar Proveedor', onPressed: () => _contactarProveedor(cuenta)),
-          IconButton(icon: Icon(Icons.report_problem_outlined, color: estadoTexto != 'OK' && estadoTexto != 'Expirado' ? Colors.amber : Colors.grey), tooltip: 'Reportar/Resolver Falla', onPressed: () async {
-            final result = await showReporteFallaDialog(
-              context: context,
-              cuenta: cuenta,
-            );
-            if (result != null) {
-              try {
-                final cuentaActualizada = result == 'resuelto'
-                    ? cuenta.copyWith(setProblemaToNull: true)
-                    : cuenta.copyWith(
-                        problemaCuenta: result as String,
-                        fechaReporteCuenta: DateTime.now(),
-                      );
-                await ref.read(cuentasProvider.notifier).saveCuenta(cuentaActualizada);
-              } catch (e) {
-                if (mounted) {
-                  NotificationService.showCustomError(context, 'Error al actualizar la falla: ${e.toString()}');
-                }
-              }
-            }
-          }),
+IconButton(
+  icon: Icon(Icons.report_problem_outlined, 
+    color: cuenta.isPaused ? Colors.red : (cuenta.problemaCuenta != null ? Colors.amber : Colors.grey)
+  ),
+  onPressed: () {
+    showDialog(
+      context: context,
+      builder: (_) => DialogoIncidenciasLimpio( // ✅ CAMBIADO
+        key: UniqueKey(),
+        cuentaId: cuenta.id,
+        titulo: "${cuenta.correo}",
+      ),
+    );
+  },
+),
 IconButton(
   icon: const Icon(Icons.list_alt, color: Colors.purpleAccent),
   tooltip: 'Ver Ventas',

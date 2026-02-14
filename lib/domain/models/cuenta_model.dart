@@ -24,6 +24,9 @@ class Cuenta extends Equatable {
   final int? diasServicio;
   final DateTime? deletedAt;
 
+    final bool isPaused;
+  final DateTime? fechaPausa;
+
   const Cuenta({
     this.id,
     required this.plataforma,
@@ -41,6 +44,8 @@ class Cuenta extends Equatable {
     this.nota,
     this.diasServicio,
     this.deletedAt,
+    this.isPaused = false,
+    this.fechaPausa,
   });
 
   int get diasRestantes {
@@ -84,6 +89,8 @@ class Cuenta extends Equatable {
         fechaFinal: json['fecha_final'],
         nota: json['nota'],
         deletedAt: json['deleted_at'] != null ? DateTime.parse(json['deleted_at']) : null,
+        isPaused: json['is_paused'] ?? false,
+        fechaPausa: json['fecha_pausa'] != null ? DateTime.parse(json['fecha_pausa']) : null,
       );
     } else {
       // Datos regulares con objetos anidados
@@ -125,6 +132,8 @@ class Cuenta extends Equatable {
       'fecha_final': fechaFinal,
       'nota': nota,
       'deleted_at': deletedAt?.toIso8601String(),
+      'is_paused': isPaused,
+      'fecha_pausa': fechaPausa?.toIso8601String(),
     };
 
     // Solo añade el 'id' si no es nulo (importante para las inserciones)
@@ -174,6 +183,8 @@ class Cuenta extends Equatable {
     String? nota,
     int? diasServicio,
     DateTime? deletedAt,
+    bool? isPaused,
+    DateTime? fechaPausa,
   }) {
     return Cuenta(
       id: id ?? this.id,
@@ -192,6 +203,8 @@ class Cuenta extends Equatable {
       nota: nota ?? this.nota,
       diasServicio: diasServicio ?? this.diasServicio,
       deletedAt: deletedAt ?? this.deletedAt,
+      isPaused: isPaused ?? this.isPaused,
+      fechaPausa: fechaPausa ?? this.fechaPausa,
     );
   }
 }

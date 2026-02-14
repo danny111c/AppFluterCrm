@@ -17,6 +17,8 @@ import '../widgets/buttons/add_button.dart';
 import '../../infrastructure/repositories/transacciones_repository.dart';
 import '../widgets/dialogs/dialogo_procesar_devolucion.dart';
 import '../../infrastructure/repositories/venta_repository.dart';
+import '../widgets/dialogs/gestionar_incidencias_dialog.dart';
+
 
 class EstadoVentaStyle {
   final String texto;
@@ -169,18 +171,28 @@ Future<void> _showDevolucionDialog(Venta venta) async {
   }
 }
 
-  EstadoVentaStyle _getTextoYColorDeEstadoVenta(Venta venta) {
-    if (venta.cuenta.problemaCuenta != null && venta.cuenta.problemaCuenta!.isNotEmpty) {
-      return EstadoVentaStyle('Fallo cuenta: ${venta.cuenta.problemaCuenta!}', const Color(0xFFD32F2F));
-    }
-    if (venta.problemaVenta != null && venta.problemaVenta!.isNotEmpty) {
-      return EstadoVentaStyle(venta.problemaVenta!, Colors.amber);
-    }
-    if (venta.diasRestantes <= 0) {
-      return EstadoVentaStyle('Expirado', Colors.red[400]!);
-    }
-    return EstadoVentaStyle('OK', Colors.green[400]!);
+EstadoVentaStyle _getTextoYColorDeEstadoVenta(Venta venta) {
+  // 1. Prioridad Máxima: Si la cuenta madre está caída
+  if (venta.cuenta.problemaCuenta != null && venta.cuenta.problemaCuenta!.isNotEmpty) {
+    return EstadoVentaStyle('⚠️ Cuenta: ${venta.cuenta.problemaCuenta!}', Colors.redAccent);
   }
+
+  // 2. Prioridad Media: Si la venta está pausada
+  if (venta.isPaused) {
+    return EstadoVentaStyle('⏸️ PAUSADO: ${venta.problemaVenta ?? "Fallo"}', Colors.orange);
+  }
+
+  // 3. Prioridad Baja: Hay un problema pero no está pausado
+  if (venta.problemaVenta != null && venta.problemaVenta!.isNotEmpty) {
+    return EstadoVentaStyle('📝 ${venta.problemaVenta!}', Colors.amber);
+  }
+
+  // 4. Estado normal
+  if (venta.diasRestantes <= 0) {
+    return EstadoVentaStyle('Expirado', Colors.red[400]!);
+  }
+  return EstadoVentaStyle('OK', Colors.green[400]!);
+}
 
   Color _getColorDiasRestantes(int diasRestantes) {
     if (diasRestantes >= 0 && diasRestantes <= 2) {
@@ -379,13 +391,38 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
 ),
     
           'Fecha Inicio': Text(_formatDate(venta.fechaInicio)),
-          'Días Restantes': Text(
-            venta.diasRestantes.toString(),
-            style: TextStyle(
-              color: _getColorDiasRestantes(venta.diasRestantes),
-              fontWeight: FontWeight.bold,
+          // REEMPLAZA LA LÍNEA DE 'Días Restantes' EN VENTAS SCREEN CON ESTO:
+'Días Restantes': venta.isPaused 
+    ? Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.amber.withOpacity(0.4)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pause_circle_filled, size: 14, color: Colors.amber),
+            SizedBox(width: 4),
+            Text(
+              "PAUSADO",
+              style: TextStyle(
+                color: Colors.amber, 
+                fontWeight: FontWeight.bold, 
+                fontSize: 10
+              ),
             ),
-          ),
+          ],
+        ),
+      )
+    : Text(
+        venta.diasRestantes.toString(),
+        style: TextStyle(
+          color: _getColorDiasRestantes(venta.diasRestantes),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
           'Fecha Final': Text(_formatDate(venta.fechaFinal)),
           'Nota': Text(venta.nota ?? ''),
           'Acciones': Row(
@@ -396,28 +433,21 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
                 tooltip: 'Contactar Cliente',
                 onPressed: () => _contactarCliente(venta),
               ),
-              IconButton(
-                icon: Icon(Icons.report_problem_outlined, color: estadoStyle.texto != 'OK' && estadoStyle.texto != 'Expirado' ? Colors.amber : Colors.grey),
-                tooltip: 'Reportar Falla de Venta',
-                onPressed: () async {
-                  final result = await showReporteVentaDialog(
-                    context: context,
-                    venta: venta,
-                  );
-                  if (result != null) {
-                    Venta ventaActualizada;
-                    if (result == 'resuelto') {
-                      ventaActualizada = venta.copyWith(setProblemaToNull: true);
-                    } else {
-                      ventaActualizada = venta.copyWith(
-                        problemaVenta: result as String,
-                        fechaReporteVenta: DateTime.now(),
-                      );
-                    }
-                    await ref.read(ventasProvider.notifier).saveVenta(ventaActualizada);
-                  }
-                },
-              ),
+IconButton(
+  icon: Icon(Icons.report_problem_outlined, 
+    color: venta.isPaused ? Colors.red : (venta.problemaVenta != null ? Colors.amber : Colors.grey)
+  ),
+  onPressed: () {
+    showDialog(
+      context: context,
+      builder: (_) => DialogoIncidenciasLimpio( // ✅ CAMBIADO
+        key: UniqueKey(), 
+        ventaId: venta.id,
+        titulo: "Incidencias de ${venta.cliente.nombre}",
+      ),
+    );
+  },
+),
               IconButton(
                 icon: const Icon(Icons.autorenew, color: Colors.purple),
                 tooltip: 'Renovar Venta',
