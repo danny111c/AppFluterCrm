@@ -19,23 +19,33 @@ class AddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(right: 16), // Padding derecho agregado
+      padding: const EdgeInsets.only(right: 16),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(10.0), // Bordes un poco más redondeados
           ),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // --- CAMBIO 1: Aumentamos el padding interno del botón ---
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18), 
+          elevation: 2,
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 20),
+            Icon(Icons.add, size: 22), // Añadimos un icono de suma real para que se vea pro
             SizedBox(width: 8),
-            Text('Añadir'),
+            // --- CAMBIO 2: Aumentamos el tamaño y grosor de la letra ---
+            Text(
+              'AÑADIR', 
+              style: TextStyle(
+                fontSize: 16, 
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5
+              )
+            ),
           ],
         ),
       ),

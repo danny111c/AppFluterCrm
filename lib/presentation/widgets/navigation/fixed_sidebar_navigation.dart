@@ -29,13 +29,21 @@ class _FixedSidebarNavigationState extends State<FixedSidebarNavigation> {
             child: _buildSidebarContent(context),
           );
         } else {
-          return Container(
-            // --- CAMBIO 1: Color de fondo del contenedor principal ---
-            color: const Color.fromARGB(255, 20, 20, 24), // Fondo completamente negro
-            width: 250,
-            child: _buildSidebarContent(context),
-          );
-        }
+           return Container(
+    width: 250,
+    // --- MODIFICA ESTE BLOQUE DE DECORATION ---
+    decoration: const BoxDecoration(
+      color: Colors.black, // Fondo negro absoluto
+      border: Border(
+        right: BorderSide(
+          color: Color.fromARGB(255, 35, 35, 35), // EL MISMO COLOR DE TU TABLA
+          width: 0.5, // EL MISMO GROSOR FINO
+        ),
+      ),
+    ),
+    child: _buildSidebarContent(context),
+  );
+}
       },
     );
   }
@@ -45,7 +53,7 @@ class _FixedSidebarNavigationState extends State<FixedSidebarNavigation> {
       children: [
         // Header de la barra de navegación sin línea separadora
         Container(
-          color: const Color.fromARGB(255, 20, 20, 24),
+          color: Colors.transparent,
           padding: const EdgeInsets.symmetric(vertical: 32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -106,8 +114,8 @@ class _FixedSidebarNavigationState extends State<FixedSidebarNavigation> {
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: BoxDecoration(
         color: widget.selectedIndex == index 
-          ? const Color.fromARGB(255, 58, 58, 58) // Azul en el Container
-          : Colors.transparent,
+  ? Colors.white.withOpacity(0.08) 
+  : Colors.transparent,
         borderRadius: BorderRadius.circular(4.0),
       ),
       child: ListTile(

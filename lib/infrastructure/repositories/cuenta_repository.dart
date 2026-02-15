@@ -19,6 +19,12 @@ class CuentaRepository {
     String? searchQuery,
     // 2. Añadimos el nuevo parámetro con un valor por defecto
     CuentaSortOption sortOption = CuentaSortOption.porFechaFinal,
+      // NUEVOS PARÁMETROS
+    String? plataformaId,
+    String? stockFilter,
+    int? diasFilter,
+    bool soloProblemas = false,
+
   }) async {
     print('[CUENTA_REPOSITORY] getCuentas llamado con:');
     print('[CUENTA_REPOSITORY] - page: $page');
@@ -44,6 +50,12 @@ class CuentaRepository {
           'page_limit': perPage,
           'page_offset': offset,
           'sort_option': sortOptionStr, // Envía el parámetro de ordenamiento
+        
+          // ENVIAR FILTROS A LA RPC
+          'p_plataforma_id': plataformaId,
+          'p_stock_filter': stockFilter ?? 'todos',
+          'p_dias_filter': diasFilter,
+          'p_solo_problemas': soloProblemas,
         },
       );
       

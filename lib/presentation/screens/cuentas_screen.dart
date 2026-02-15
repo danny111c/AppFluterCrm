@@ -28,7 +28,13 @@ import '../../domain/providers/venta_provider.dart';
 import '../../infrastructure/repositories/transacciones_repository.dart';
 import '../widgets/dialogs/dialogo_procesar_devolucion.dart';
 import '../widgets/dialogs/gestionar_incidencias_dialog.dart';
+import '../../domain/providers/plataforma_provider.dart'; // <--- AÑADE ESTA LÍNEA
+
+import 'package:collection/collection.dart'; // ✅ Necesario para firstWhereOrNull
+import '../../domain/models/plataforma_model.dart'; // ✅ Necesario para reconocer el tipo Plataforma
+
 class CuentasScreen extends ConsumerStatefulWidget {
+
   const CuentasScreen({super.key});
 
   @override
@@ -42,7 +48,11 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   final VentaRepository _ventaRepo = VentaRepository();
   final TextEditingController _searchController = TextEditingController();
 
-
+  // --- VARIABLES TEMPORALES PARA FILTRAR ---
+  String? _tempPlataforma;
+  String? _tempStock = 'todos';
+  int? _tempMaxDias;
+  bool _tempSoloProblemas = false;
 
   @override
   void dispose() {
@@ -53,7 +63,121 @@ class _CuentasScreenState extends ConsumerState<CuentasScreen> {
   // (El resto de tus métodos como _loadCuentas, _showCuentaModal, etc., no cambian)
   // ...
 
-  
+  // --- HELPERS DE DISEÑO PARA LA BARRA DE FILTROS ---
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 18),
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+      filled: true,
+      fillColor: Colors.black,
+      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+      // Borde cuando no está seleccionado
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8), 
+        borderSide: const BorderSide(color: Color(0xFF232323))
+      ),
+      // Borde cuando haces clic
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8), 
+        borderSide: const BorderSide(color: Colors.amber, width: 0.5)
+      ),
+    );
+  }
+
+// BORRA LA VERSIÓN DE ARRIBA Y DEJA SOLO ESTA AL FINAL DE LA CLASE:
+
+Widget _dropdownMinimal<T extends Object>({
+  required T? value,
+  required List<T> options,
+  required String hint,
+  required String Function(T) displayString,
+  required Function(T?) onSelected,
+}) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      return Autocomplete<T>(
+        displayStringForOption: displayString,
+        initialValue: TextEditingValue(text: value != null ? displayString(value) : ''),
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          // Sincronizar texto cuando cambia externamente
+          if (value == null) {
+            controller.clear();
+          } else {
+            controller.text = displayString(value);
+          }
+
+          return GestureDetector(
+            onTap: () => focusNode.requestFocus(),
+            child: SizedBox(
+              height: 38,
+              child: TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                readOnly: true, // 🚫 Evita que el usuario escriba
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 11),
+                  suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.white38, size: 18),
+                  filled: true,
+                  fillColor: Colors.black,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF232323)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.white, width: 0.5),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        optionsBuilder: (TextEditingValue val) => options,
+        onSelected: onSelected,
+        optionsViewBuilder: (context, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              color: Colors.white, // Fondo blanco como el modal
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+              child: Container(
+                width: constraints.maxWidth, // ANCHO IDÉNTICO AL RECUADRO NEGRO
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final T option = options.elementAt(index);
+                    return InkWell(
+                      onTap: () => onSelected(option),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: Colors.grey.shade200, width: 0.5)),
+                        ),
+                        child: Text(
+                          displayString(option),
+                          style: const TextStyle(color: Colors.black, fontSize: 12), // Letras negras
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 // Dentro de _CuentasScreenState
 @override
 void initState() {
@@ -69,6 +193,189 @@ void initState() {
     }
   });
 }
+
+
+Widget _buildFiltrosHeader(WidgetRef ref, CuentasState state) {
+  final plataformas = ref.watch(plataformasProvider).plataformas;
+  const Color labelColor = Colors.white38;
+  const double labelSize = 9;
+
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      // 1. BUSCADOR RÁPIDO
+      Expanded(
+        flex: 4, 
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("BUSCADOR RÁPIDO", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            SizedBox(
+              height: 38,
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: _inputDecoration("Correo, proveedor o ID..."),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 10),
+
+// --- 2. STOCK ---
+Expanded(
+  flex: 1,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("STOCK", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 5),
+      _dropdownMinimal<String>(
+        value: _tempStock == 'todos' ? 'Todas' : (_tempStock == 'con_stock' ? 'Cupo' : 'Llenas'),
+        options: ['Todas', 'Cupo', 'Llenas'],
+        hint: 'Todas',
+        displayString: (val) => val,
+        onSelected: (val) {
+          setState(() {
+            if (val == 'Todas') _tempStock = 'todos';
+            else if (val == 'Cupo') _tempStock = 'con_stock';
+            else _tempStock = 'agotados';
+          });
+        },
+      ),
+    ],
+  ),
+),
+const SizedBox(width: 8),
+
+// --- 3. VENCIMIENTO ---
+Expanded(
+  flex: 1,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("VENCIMIENTO", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 5),
+      _dropdownMinimal<String>(
+        value: _tempMaxDias == null ? 'Todas' : (_tempMaxDias == 2 ? '0-2 d' : '3-5 d'),
+        options: ['Todas', '0-2 d', '3-5 d'],
+        hint: 'Todas',
+        displayString: (val) => val,
+        onSelected: (val) {
+          setState(() {
+            if (val == 'Todas') _tempMaxDias = null;
+            else if (val == '0-2 d') _tempMaxDias = 2;
+            else _tempMaxDias = 5;
+          });
+        },
+      ),
+    ],
+  ),
+),
+const SizedBox(width: 8),
+
+// --- 4. PLATAFORMA ---
+Expanded(
+  flex: 1,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("PLATAFORMA", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 5),
+      _dropdownMinimal<Plataforma>(
+        // Creamos un objeto temporal para representar "Todas" y cumplir con <T extends Object>
+        value: _tempPlataforma != null 
+            ? plataformas.firstWhere((p) => p.id == _tempPlataforma) 
+            : Plataforma(id: 'all', nombre: 'Todas'),
+        options: [Plataforma(id: 'all', nombre: 'Todas'), ...plataformas],
+        hint: 'Todas',
+        displayString: (p) => p.nombre,
+        onSelected: (val) {
+          setState(() => _tempPlataforma = (val?.id == 'all') ? null : val?.id);
+        },
+      ),
+    ],
+  ),
+),
+
+      // 5. RECIENTES (SWITCH PEQUEÑO)
+      Column(
+        children: [
+          const Text("RECIENTES", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+          SizedBox(
+            height: 40,
+            child: Transform.scale(
+              scale: 0.65, // Aún más pequeño para ahorrar espacio
+              child: Switch(
+                value: state.ordenarPorRecientes,
+                onChanged: (value) => ref.read(cuentasProvider.notifier).toggleOrdenarPorRecientes(value),
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(width: 4),
+
+      // 6. BOTÓN FALLOS
+      Column(
+        children: [
+          const Text("FALLOS", style: TextStyle(color: labelColor, fontSize: labelSize, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          Container(
+            height: 38,
+            width: 36, // Más angosto
+            decoration: BoxDecoration(
+              color: _tempSoloProblemas ? Colors.amber.withOpacity(0.1) : Colors.black,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: _tempSoloProblemas ? Colors.amber : const Color(0xFF232323)),
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.report_problem, color: _tempSoloProblemas ? Colors.amber : Colors.white24, size: 15),
+              onPressed: () => setState(() => _tempSoloProblemas = !_tempSoloProblemas),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(width: 8),
+
+      // 7. BOTÓN FILTRAR
+      Container(
+        height: 38,
+        width: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.filter_alt, color: Colors.amber, size: 18),
+          onPressed: () {
+            ref.read(cuentasProvider.notifier).setFiltros(
+              plataformaId: _tempPlataforma,
+              stock: _tempStock,
+              maxDias: _tempMaxDias,
+              soloProblemas: _tempSoloProblemas,
+              query: _searchController.text,
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+
+
+
+
+
+
+
+
 // Método removido - ahora usamos el provider
 
 Future<void> _showCuentaModal([Cuenta? cuenta]) async {
@@ -301,7 +608,7 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
       DataColumn(label: Text('Contraseña')),
       DataColumn(label: Text('Precio Compra')),
       DataColumn(label: Text('Estado')),
-      DataColumn(label: Text('Perfiles')),
+      DataColumn(label: Text('Stock')),
       DataColumn(label: Text('Fecha Inicio')),
       DataColumn(label: Text('Días Restantes')),
       DataColumn(label: Text('Final')),
@@ -322,7 +629,7 @@ if (cuentasState.isLoading && cuentasState.cuentas.isEmpty) {
       'Contraseña': _buildShimmerPlaceholder(width: 100),
       'Precio Compra': _buildShimmerPlaceholder(width: 60),
       'Estado': _buildShimmerPlaceholder(width: 80),
-      'Perfiles': _buildShimmerPlaceholder(width: 50),
+      'Stock': _buildShimmerPlaceholder(width: 50),
       'Fecha Inicio': _buildShimmerPlaceholder(width: 90),
       'Días Restantes': _buildShimmerPlaceholder(width: 50),
       'Final': _buildShimmerPlaceholder(width: 90),
@@ -366,7 +673,7 @@ if (cuentasState.isLoading && cuentasState.cuentas.isEmpty) {
           fontWeight: FontWeight.bold,
         ),
       ),
-'Perfiles': Text(
+'Stock': Text(
   cuenta.numPerfiles == 0 
       ? cuenta.tipoCuenta.nombre.toUpperCase() // Muestra "COMPLETA" (o el nombre que pusiste)
       : '${cuenta.perfilesDisponibles}/${cuenta.numPerfiles}', // Muestra "1/5"
@@ -512,43 +819,26 @@ IconButton(
 }
 
 
-  return Scaffold(
-    // ===== 1. APPBAR MODIFICADO AL ESTILO DE VENTASSCREEN =====
+    return Scaffold(
     appBar: AppBar(
       toolbarHeight: 100,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      scrolledUnderElevation: 0.0,
+              scrolledUnderElevation: 0.0,
+
       title: Container(
         padding: const EdgeInsets.only(top: 20),
-        child: const Text('Gestión de Cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
+        child: const Text('Gestión de Cuentas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31,)),
       ),
       actions: [
-        // El AddButton se mueve aquí desde el body
-        AddButton(
-          onPressed: () => _showCuentaModal(),
-        ),
+        AddButton(onPressed: () => _showCuentaModal()),
       ],
     ),
-    // ==========================================================
-
-    // ===== 2. BODY REESTRUCTURADO =====
     body: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // La fila de "Ordenar" se mueve aquí desde el AppBar
-          Row(
-            children: [
-              Expanded(child: Container()),
-              const Text('Ordenar por más recientes'),
-              Switch(
-                value: cuentasState.ordenarPorRecientes,
-                onChanged: (value) => ref.read(cuentasProvider.notifier).toggleOrdenarPorRecientes(value),
-              ),
-            ],
-          ),
-          // El AddButton y el SizedBox que estaban aquí se eliminan
+          // SE ELIMINÓ LA FILA DEL SWITCH DE AQUÍ PORQUE YA ESTÁ EN EL HEADER
           Expanded(
             child: ReusableDataTablePanel(
               searchController: _searchController,
@@ -562,15 +852,14 @@ IconButton(
               currentPage: cuentasState.currentPage,
               totalPages: cuentasState.totalPages,
               onPageChanged: (page) => ref.read(cuentasProvider.notifier).changePage(page),
+              filterActions: _buildFiltrosHeader(ref, cuentasState), 
             ),
           ),
         ],
       ),
     ),
-    // ===================================
   );
-
-  }
+}
   // ✅ HELPER VISUAL DE PRIORIDADES
   Widget _badgePrioridad(String texto, String? prioridad, bool pausado) {
     Color color;
@@ -617,4 +906,5 @@ IconButton(
       ),
     );
   }
+  
 }

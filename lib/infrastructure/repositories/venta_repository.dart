@@ -14,6 +14,9 @@ class VentaRepository {
     bool sortByRecent = false,
     String orderBy = 'fecha_final',
     bool orderDesc = false,
+        String? plataformaId, // Nuevo
+    int? diasFilter,      // Nuevo
+    bool soloProblemas = false, // Nuevo
   }) async {
     try {
       final offset = (page - 1) * perPage;
@@ -31,6 +34,10 @@ class VentaRepository {
           'page_offset': offset,
           'order_by': orderBy,
           'order_desc': orderDesc,
+  'filtro_cliente_id': null, // Añadido para consistencia
+  'plataforma_id': plataformaId, // ✅ SIN EL p_
+  'dias_filter': diasFilter,     // ✅ SIN EL p_
+  'solo_problemas': soloProblemas, // ✅ SIN EL p_ // ✅ AHORA COINCIDE CON EL SQL
         },
       );
 
@@ -89,6 +96,9 @@ Future<List<Map<String, dynamic>>> getPerfilesDisponibles(String cuentaId) async
     bool sortByRecent = false,
     String orderBy = 'fecha_final',
     bool orderDesc = false,
+    String? plataformaId, // Nuevo
+    int? diasFilter,      // Nuevo
+    bool soloProblemas = false, // Nuevo
   }) async {
     try {
       final response = await _supabase.rpc(
@@ -100,6 +110,9 @@ Future<List<Map<String, dynamic>>> getPerfilesDisponibles(String cuentaId) async
           'page_offset': 0,
           'order_by': orderBy,
           'order_desc': orderDesc,
+          'plataforma_id': plataformaId,
+          'dias_filter': diasFilter,
+          'solo_problemas': soloProblemas,
         },
       );
 

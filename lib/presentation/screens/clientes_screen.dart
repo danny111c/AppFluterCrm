@@ -328,7 +328,7 @@ Future<void> _showClienteModal([Cliente? cliente]) async {
         scrolledUnderElevation: 0.0,
         title: Container(
           padding: const EdgeInsets.only(top: 20),
-          child: const Text('Gestión de Clientes', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Gestión de Clientes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
         ),
         actions: [
           AddButton(onPressed: () => _showClienteModal()),

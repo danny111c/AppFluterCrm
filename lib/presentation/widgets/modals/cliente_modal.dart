@@ -164,7 +164,7 @@ class _ClienteModalState extends State<ClienteModal> {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: const Color.fromARGB(255, 15, 15, 15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
             ),
@@ -187,7 +187,7 @@ class _ClienteModalState extends State<ClienteModal> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: const Color.fromARGB(255, 15, 15, 15),
+                        fillColor: const Color.fromARGB(255, 0, 0, 0),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -206,7 +206,7 @@ class _ClienteModalState extends State<ClienteModal> {
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: const Color.fromARGB(255, 15, 15, 15),
+                            fillColor: const Color.fromARGB(255, 0, 0, 0),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -224,7 +224,7 @@ class _ClienteModalState extends State<ClienteModal> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: const Color.fromARGB(255, 15, 15, 15),
+                        fillColor: const Color.fromARGB(255, 0, 0, 0),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

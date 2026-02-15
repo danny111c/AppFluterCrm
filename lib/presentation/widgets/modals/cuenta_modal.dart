@@ -487,7 +487,7 @@ print('DEBUG: About to call widget.onSave');
                 : [],
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color.fromARGB(255, 15, 15, 15),
+            fillColor: const Color.fromARGB(255, 0, 0, 0),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -520,7 +520,7 @@ print('DEBUG: About to call widget.onSave');
             height: 700,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: const Color.fromARGB(255, 15, 15, 15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
             ),
@@ -610,7 +610,7 @@ Column(
                 decoration: InputDecoration(
                   suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
                   filled: true,
-                  fillColor: const Color.fromARGB(255, 15, 15, 15),
+                  fillColor: const Color.fromARGB(255, 11, 11, 11),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -707,7 +707,7 @@ return RawAutocomplete<Proveedor>( // ✅ DEBE SER <Proveedor>
                 decoration: InputDecoration(
                   suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
                   filled: true,
-                  fillColor: const Color.fromARGB(255, 15, 15, 15),
+                  fillColor: const Color.fromARGB(255, 11, 11, 11),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -799,8 +799,10 @@ Column(
                 focusNode: focusNode,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
+                                    suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+
                   filled: true,
-                  fillColor: const Color.fromARGB(255, 15, 15, 15),
+                  fillColor: const Color.fromARGB(255, 11, 11, 11),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -867,7 +869,7 @@ const SizedBox(height: 15),
                                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                       decoration: InputDecoration(
                                         filled: true,
-                                        fillColor: const Color.fromARGB(255, 15, 15, 15),
+                                        fillColor: const Color.fromARGB(255, 0, 0, 0),
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -898,7 +900,7 @@ validator: (value) {
                                           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))],
                                           decoration: InputDecoration(
                                             filled: true,
-                                            fillColor: const Color.fromARGB(255, 15, 15, 15),
+                                            fillColor: const Color.fromARGB(255, 0, 0, 0),
                                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -922,7 +924,7 @@ validator: (value) {
                                     ),
                                     Text('Fecha de Inicio', style: TextStyle(color: Colors.white.withOpacity(0.8))),
                                     const SizedBox(height: 5),
-                                    TextFormField(controller: _fechaInicioController, readOnly: true, style: const TextStyle(color: Colors.white), decoration: InputDecoration(filled: true, fillColor: const Color.fromARGB(255, 15, 15, 15), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none), suffixIcon: const Icon(Icons.calendar_today, color: Colors.grey), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12)), onTap: () => _seleccionarFechaInicio(context), validator: (value) {if (value == null || value.isEmpty) return 'Seleccione una fecha'; return null;}),
+                                    TextFormField(controller: _fechaInicioController, readOnly: true, style: const TextStyle(color: Colors.white), decoration: InputDecoration(filled: true, fillColor: const Color.fromARGB(255, 0, 0, 0), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none), suffixIcon: const Icon(Icons.calendar_today, color: Colors.grey), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12)), onTap: () => _seleccionarFechaInicio(context), validator: (value) {if (value == null || value.isEmpty) return 'Seleccione una fecha'; return null;}),
                                     const SizedBox(height: 15),
 
                                     // --- Inicio del bloque de "Días de Servicio" modificado ---
@@ -938,7 +940,7 @@ validator: (value) {
                                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                           decoration: InputDecoration(
                                             filled: true,
-                                            fillColor: const Color.fromARGB(255, 15, 15, 15),
+                                            fillColor: const Color.fromARGB(255, 0, 0, 0),
                                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white)),
                                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -981,7 +983,7 @@ validator: (value) {
                                     
                                     Text('Fecha Final', style: TextStyle(color: Colors.white.withOpacity(0.8))),
                                     const SizedBox(height: 5),
-                                    TextFormField(controller: _fechaFinalController, readOnly: true, style: const TextStyle(color: Colors.grey), decoration: InputDecoration(filled: true, fillColor: const Color.fromARGB(255, 15, 15, 15), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12))),
+                                    TextFormField(controller: _fechaFinalController, readOnly: true, style: const TextStyle(color: Colors.grey), decoration: InputDecoration(filled: true, fillColor: const Color.fromARGB(255, 0, 0, 0), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12))),
                                     const SizedBox(height: 15),
                                     _buildTextField(_notaController, 'Nota'),
                                   ],
@@ -1110,7 +1112,7 @@ validator: (value) {
         filled: true,
         fillColor: readOnly
             ? Colors.black.withOpacity(0.2)
-            : const Color.fromARGB(255, 15, 15, 15),
+            : const Color.fromARGB(255, 11, 11, 11),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,

@@ -22,6 +22,11 @@ class VentasState {
   final bool sortByRecent; // Para el ordenamiento
 final String? filterInfo; // ✅ Nueva propiedad
 
+  // NUEVOS CAMPOS PARA FILTROS
+  final String? filterPlataformaId;
+  final int? filterMaxDias;
+  final bool filterSoloProblemas;
+
   VentasState({
     this.ventas = const [],
     this.isLoading = false,
@@ -31,7 +36,10 @@ final String? filterInfo; // ✅ Nueva propiedad
     this.cuentaId,
     this.sortByRecent = false,
     this.filterInfo,
-  });
+    this.filterPlataformaId,
+    this.filterMaxDias,
+    this.filterSoloProblemas = false,
+      });
 
   VentasState copyWith({
     List<Venta>? ventas,
@@ -43,6 +51,9 @@ final String? filterInfo; // ✅ Nueva propiedad
     bool? sortByRecent,
     bool resetCuentaId = false, // Para limpiar el filtro de cuenta
     String? filterInfo,
+    String? filterPlataformaId,
+    int? filterMaxDias,
+    bool? filterSoloProblemas,
   }) {
     return VentasState(
       ventas: ventas ?? this.ventas,
@@ -53,11 +64,17 @@ final String? filterInfo; // ✅ Nueva propiedad
       cuentaId: resetCuentaId ? null : cuentaId ?? this.cuentaId,
       sortByRecent: sortByRecent ?? this.sortByRecent,
       filterInfo: filterInfo ?? this.filterInfo,
-      );
+      filterPlataformaId: filterPlataformaId ?? this.filterPlataformaId,
+      filterMaxDias: filterMaxDias ?? this.filterMaxDias,
+      filterSoloProblemas: filterSoloProblemas ?? this.filterSoloProblemas,
+    );
   }
 }
 
 // --- El Notifier ---
+
+
+
 // --- El Notifier Modificado ---
 class VentasNotifier extends StateNotifier<VentasState> {
   final Ref _ref;
@@ -128,53 +145,43 @@ class VentasNotifier extends StateNotifier<VentasState> {
   // ====================== FIN DEBUGGING ======================
 
 
-  Future<void> loadVentas({int page = 1, bool showLoading = true}) async {
-    print('[VENTAS_PROVIDER] loadVentas INICIO | sortByRecent: [33m[1m${state.sortByRecent}[0m, page: $page, showLoading: $showLoading');
-  // ✅ LIMPIEZA OBLIGATORIA
-  String? queryLimpio = state.searchQuery;
-  if (queryLimpio == "null" || queryLimpio == "" || queryLimpio == "NULL") {
-    queryLimpio = null;
-  }
+Future<void> loadVentas({int page = 1, bool showLoading = true}) async {
+    if (showLoading) state = state.copyWith(isLoading: true);
 
-
-    if (showLoading) {
-      state = state.copyWith(isLoading: true);
-    }
-
-    // Determinar parámetros de orden
     final orderBy = state.sortByRecent ? 'created_at' : 'fecha_final';
     final orderDesc = state.sortByRecent ? true : false;
-    print('[VENTAS_PROVIDER] loadVentas | orderBy: $orderBy, orderDesc: $orderDesc');
 
     try {
       final totalCount = await _ventaRepo.getVentasCount(
-        searchQuery: queryLimpio, // ✅ Usa el query limpio
+        searchQuery: state.searchQuery,
         cuentaId: state.cuentaId,
         orderBy: orderBy,
         orderDesc: orderDesc,
       );
-      final totalPages = (totalCount / _perPage).ceil();
+      
       final ventas = await _ventaRepo.getVentas(
         page: page,
         perPage: _perPage,
-        searchQuery: queryLimpio, // ✅ Usa el query limpio
+        searchQuery: state.searchQuery,
         cuentaId: state.cuentaId,
         orderBy: orderBy,
         orderDesc: orderDesc,
+        // ENVIAR NUEVOS FILTROS AL REPOSITORIO
+        plataformaId: state.filterPlataformaId,
+        diasFilter: state.filterMaxDias,
+        soloProblemas: state.filterSoloProblemas,
       );
-      print('[VENTAS_PROVIDER] loadVentas | ventas recibidas: ${ventas.length}, totalCount: $totalCount, totalPages: $totalPages');
 
       state = state.copyWith(
         ventas: ventas,
         isLoading: false,
         currentPage: page,
-        totalPages: totalPages > 0 ? totalPages : 1,
+        totalPages: (totalCount / _perPage).ceil() > 0 ? (totalCount / _perPage).ceil() : 1,
       );
     } catch (e) {
-      print('[VENTAS_PROVIDER] [ERROR] loadVentas: $e');
       state = state.copyWith(isLoading: false);
     }
-  }
+}
 
   Future<void> changePage(int page) async {
     await loadVentas(page: page);
@@ -309,6 +316,30 @@ _perfilChannel = Supabase.instance.client
     _clienteChannel?.unsubscribe();
     super.dispose();
   }
+
+  // Añadir este método al final del Notifier
+void setFiltros({
+  String? plataformaId,
+  int? maxDias,
+  bool? soloProblemas,
+  String? query,
+}) {
+  // Reset de estado con valores reales (evitando el error del ?? de copyWith)
+  state = VentasState(
+    ventas: state.ventas,
+    isLoading: true,
+    currentPage: 1,
+    totalPages: state.totalPages,
+    searchQuery: query,
+    cuentaId: state.cuentaId,
+    filterInfo: state.filterInfo,
+    sortByRecent: state.sortByRecent,
+    filterPlataformaId: plataformaId, 
+    filterMaxDias: maxDias,
+    filterSoloProblemas: soloProblemas ?? false,
+  );
+  loadVentas(page: 1, showLoading: false);
+}
 }
 
 // --- El Provider Final Modificado ---

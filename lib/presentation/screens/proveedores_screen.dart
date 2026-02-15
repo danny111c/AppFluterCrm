@@ -253,7 +253,7 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
             scrolledUnderElevation: 0.0,
             title: Container(
               padding: const EdgeInsets.only(top: 20),
-              child: const Text('Proveedores', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Gestión de Proveedores', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
             ),
             actions: [
               AddButton(onPressed: () => _showProveedorModal()),

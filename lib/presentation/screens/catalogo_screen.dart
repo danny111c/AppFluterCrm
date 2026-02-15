@@ -49,7 +49,7 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
   void _onSearchPlataformas(String query) => ref.read(plataformasProvider.notifier).search(query);
   void _onSearchTiposCuenta(String query) => ref.read(tiposCuentaProvider.notifier).search(query);
 
-  @override
+@override
   Widget build(BuildContext context) {
     final plataformasState = ref.watch(plataformasProvider);
     final tiposCuentaState = ref.watch(tiposCuentaProvider);
@@ -59,10 +59,9 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
         toolbarHeight: 100,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        scrolledUnderElevation: 0.0,
         title: Container(
           padding: const EdgeInsets.only(top: 20),
-          child: const Text('Catálogo', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Catálogo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
         ),
         actions: [
           AddButton(
@@ -74,31 +73,8 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Selector de pestañas
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: ToggleButtons(
-                  isSelected: [_selectedTableIndex == 0, _selectedTableIndex == 1],
-                  borderRadius: BorderRadius.circular(8),
-                  fillColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                  selectedColor: Theme.of(context).colorScheme.primary,
-                  color: Colors.white,
-                  constraints: const BoxConstraints(minWidth: 180, minHeight: 40),
-                  onPressed: (index) {
-                    setState(() {
-                      _selectedTableIndex = index;
-                    });
-                  },
-                  children: const [
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Plataformas')),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Tipos de Cuenta')),
-                  ],
-                ),
-              ),
-            ),
-
-            // Área de tabla (Ocupa todo el ancho gracias a ReusableDataTablePanel)
+            // ❌ SE ELIMINÓ EL ToggleButtons DE AQUÍ
+            
             Expanded(
               child: _selectedTableIndex == 0
                   ? _buildPlataformasTable(plataformasState)
@@ -133,6 +109,8 @@ Widget _buildPlataformasTable(plataformasState) {
 
   return ReusableDataTablePanel(
     key: const ValueKey('plataformas'),
+        filterActions: _buildFiltrosCatalogo(), // ✅ AÑADIDO
+
     columns: const [
       DataColumn(label: Text('Nombre')),
       DataColumn(label: Text('Nota')),
@@ -172,6 +150,8 @@ Widget _buildTiposCuentaTable(tiposCuentaState) {
 
   return ReusableDataTablePanel(
     key: const ValueKey('tipos_cuenta'),
+        filterActions: _buildFiltrosCatalogo(), // ✅ AÑADIDO
+
     columns: const [
       DataColumn(label: Text('Nombre')),
       DataColumn(label: Text('Nota')),
@@ -310,5 +290,93 @@ Future<void> _onDeleteTipoCuenta(TipoCuenta tipoCuenta) async {
         if (mounted) NotificationService.showError(context, 'Error al eliminar: $e');
       }
     }
+  }
+  // --- BARRA DE FILTROS PERSONALIZADA PARA CATÁLOGO ---
+  Widget _buildFiltrosCatalogo() {
+    const Color borderColor = Color.fromARGB(255, 35, 35, 35);
+    const double borderWidth = 0.5;
+
+    return Row(
+      children: [
+        // 1. SELECTOR IZQUIERDO (PLATAFORMAS / TIPOS)
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor, width: borderWidth),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTabButton('PLATAFORMAS', 0),
+              _buildTabButton('TIPOS DE CUENTA', 1),
+            ],
+          ),
+        ),
+        const SizedBox(width: 15),
+        
+        // 2. DIVIDER VERTICAL
+        Container(width: 1, height: 25, color: borderColor),
+        const SizedBox(width: 15),
+
+        // 3. BUSCADOR INTEGRADO
+        Expanded(
+          child: SizedBox(
+            height: 38,
+            child: TextField(
+              controller: _selectedTableIndex == 0 ? _searchController : _searchTipoCuentaController,
+              onSubmitted: (val) => _selectedTableIndex == 0 ? _onSearchPlataformas(val) : _onSearchTiposCuenta(val),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Buscar en el catálogo...',
+                hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 18),
+                filled: true,
+                fillColor: Colors.black,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8), 
+                  borderSide: const BorderSide(color: Color(0xFF232323))
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8), 
+                  borderSide: const BorderSide(color: Colors.white38, width: 0.5)
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabButton(String label, int index) {
+    bool isSelected = _selectedTableIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedTableIndex = index;
+        // Opcional: limpiar búsquedas al cambiar
+        _searchController.clear();
+        _searchTipoCuentaController.clear();
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white38,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
   }
 }

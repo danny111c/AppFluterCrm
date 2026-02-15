@@ -21,6 +21,10 @@ class CuentasState {
   final String? searchQuery;
   final CuentaSortOption sortOption;
   final bool ordenarPorRecientes; // <--- NUEVO: bandera para el switch
+  final String? filterPlataformaId;
+  final String? filterStock; // 'todos', 'con_stock', 'agotados'
+  final int? filterMaxDias;  // 2, 7, 30 o null
+  final bool filterSoloProblemas;
 
   CuentasState({
     this.cuentas = const [],
@@ -30,6 +34,10 @@ class CuentasState {
     this.searchQuery,
     this.sortOption = CuentaSortOption.porFechaFinal,
     this.ordenarPorRecientes = false,
+    this.filterPlataformaId,
+    this.filterStock,
+    this.filterMaxDias,
+    this.filterSoloProblemas = false,
   });
 
   CuentasState copyWith({
@@ -40,6 +48,10 @@ class CuentasState {
     String? searchQuery,
     CuentaSortOption? sortOption,
     bool? ordenarPorRecientes,
+    String? filterPlataformaId,
+    String? filterStock,
+    int? filterMaxDias,
+    bool? filterSoloProblemas,
   }) {
     return CuentasState(
       cuentas: cuentas ?? this.cuentas,
@@ -49,6 +61,10 @@ class CuentasState {
       searchQuery: searchQuery ?? this.searchQuery,
       sortOption: sortOption ?? this.sortOption,
       ordenarPorRecientes: ordenarPorRecientes ?? this.ordenarPorRecientes,
+      filterPlataformaId: filterPlataformaId ?? this.filterPlataformaId,
+      filterStock: filterStock ?? this.filterStock,
+      filterMaxDias: filterMaxDias ?? this.filterMaxDias,
+      filterSoloProblemas: filterSoloProblemas ?? this.filterSoloProblemas,
     );
   }
 }
@@ -177,38 +193,38 @@ void toggleOrdenarPorRecientes(bool value) {
 
 
 
-  Future<void> _loadCuentas({int page = 1, String? searchQuery, CuentaSortOption? sortOption, bool showLoading = true, bool? ordenarPorRecientes}) async {
+Future<void> _loadCuentas({
+    int page = 1, 
+    String? searchQuery, 
+    CuentaSortOption? sortOption, 
+    bool showLoading = true, 
+    bool? ordenarPorRecientes
+  }) async {
     final ordenarRecientes = ordenarPorRecientes ?? state.ordenarPorRecientes;
-    if (showLoading) {
-      state = state.copyWith(isLoading: true);
-    }
+    if (showLoading) state = state.copyWith(isLoading: true);
+
     try {
-      final totalCount = await _cuentaRepo.getCuentasCount(searchQuery: searchQuery);
-      final totalPages = (totalCount / _perPage).ceil();
-      final actualSortOption = ordenarRecientes ? CuentaSortOption.porCreacionReciente : (sortOption ?? state.sortOption);
+      // Pasamos TODOS los filtros actuales del estado al repositorio
       final cuentas = await _cuentaRepo.getCuentas(
-          page: page, perPage: _perPage, searchQuery: searchQuery, sortOption: actualSortOption);
+        page: page,
+        perPage: _perPage,
+        searchQuery: searchQuery ?? state.searchQuery,
+        sortOption: ordenarRecientes ? CuentaSortOption.porCreacionReciente : (sortOption ?? state.sortOption),
+        plataformaId: state.filterPlataformaId,
+        stockFilter: state.filterStock,
+        diasFilter: state.filterMaxDias,
+        soloProblemas: state.filterSoloProblemas,
+      );
       
-      // ===== LOGS CORREGIDOS =====
-      for (int i = 0; i < cuentas.length; i++) {
-        final cuenta = cuentas[i];
-        print('[CUENTAS_PROVIDER] Cuenta $i:');
-        print('[CUENTAS_PROVIDER] - correo: ${cuenta.correo}');
-        print('[CUENTAS_PROVIDER] - plataforma.nombre: ${cuenta.plataforma.nombre}'); // <- LEER DEL OBJETO
-        print('[CUENTAS_PROVIDER] - tipoCuenta.nombre: ${cuenta.tipoCuenta.nombre}'); // <- LEER DEL OBJETO
-        print('[CUENTAS_PROVIDER] - proveedor.nombre: ${cuenta.proveedor.nombre}'); // <- LEER DEL OBJETO
-      }
-      
+      final totalCount = await _cuentaRepo.getCuentasCount(searchQuery: searchQuery ?? state.searchQuery);
+
       state = state.copyWith(
         cuentas: cuentas,
         isLoading: false,
         currentPage: page,
-        totalPages: totalPages > 0 ? totalPages : 1,
-        searchQuery: searchQuery,
-        sortOption: sortOption ?? state.sortOption,
+        totalPages: (totalCount / _perPage).ceil() > 0 ? (totalCount / _perPage).ceil() : 1,
       );
     } catch (e) {
-      print('[ERROR] _loadCuentas: $e');
       state = state.copyWith(isLoading: false);
     }
   }
@@ -319,6 +335,37 @@ void toggleOrdenarPorRecientes(bool value) {
     _proveedorChannel?.unsubscribe();
     super.dispose();
   }
+
+
+  void setFiltros({
+  String? plataformaId,
+  String? stock,
+  int? maxDias,
+  bool? soloProblemas,
+    String? query, // <--- AÑADIDO
+
+}) {
+state = CuentasState(
+    cuentas: state.cuentas,
+    isLoading: true,
+    currentPage: 1,
+    totalPages: state.totalPages,
+    searchQuery: query, // Si es vacío, cargará todas
+    sortOption: state.sortOption,
+    ordenarPorRecientes: state.ordenarPorRecientes,
+    
+    // Pasamos los valores tal cual vienen (si vienen null, se resetean)
+    filterPlataformaId: plataformaId, 
+    filterStock: stock,
+    filterMaxDias: maxDias,
+    filterSoloProblemas: soloProblemas ?? false,
+  );
+
+  _loadCuentas(page: 1, showLoading: false);
+}
+
+
+
 }
 
 // --- El Provider Final Modificado ---

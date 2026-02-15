@@ -127,23 +127,39 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
     final balance = totalVentas - totalGastos;
 
     return Scaffold(
+           // --- BLOQUE DE TÍTULO AÑADIDO ---
+      appBar: AppBar(
+        toolbarHeight: 100,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0.0,
+        title: Container(
+          padding: const EdgeInsets.only(top: 20),
+          child: const Text(
+            'Transacciones', 
+            style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              fontSize: 31, // Tamaño solicitado
+              color: Colors.white,
+            )
+          ),
+        ),
+      ),
+      // --------------------------------
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(totalVentas, totalGastos, balance),
-            const SizedBox(height: 20),
-            _buildToggleButtons(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
+
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _selectedType == HistorialType.cuentas
-                    ? _buildCuentasTable(cuentasState)
-                    : _buildVentasTable(ventasState),
-              ),
+              child: _selectedType == HistorialType.cuentas
+                  ? _buildCuentasTable(cuentasState)
+                  : _buildVentasTable(ventasState),
             ),
+            // ------------------------------------------------
           ],
         ),
       ),
@@ -248,11 +264,12 @@ Widget _buildSummaryCard(String title, double amount, Color color) {
     }
 
     return ReusableDataTablePanel(
-      key: const ValueKey('cuentasTable'), // Key para el AnimatedSwitcher
-      columns: _getCuentaColumns(),
+      key: const ValueKey('ventasTable'),
+      columns: _getVentaColumns(),
       data: data,
-      searchController: _searchController,
-      onSearchSubmitted: _onSearchSubmitted,
+      // ✅ PASAMOS EL NUEVO HEADER AQUÍ
+      filterActions: _buildFiltrosTransacciones(),
+      // El resto igual...
       currentPage: state.currentPage,
       totalPages: state.totalPages,
       onPageChanged: (page) => notifier.loadHistorial(page: page),
@@ -283,11 +300,12 @@ Widget _buildSummaryCard(String title, double amount, Color color) {
     }
 
     return ReusableDataTablePanel(
-      key: const ValueKey('ventasTable'), // Key para el AnimatedSwitcher
-      columns: _getVentaColumns(),
+      key: const ValueKey('cuentasTable'),
+      columns: _getCuentaColumns(),
       data: data,
-      searchController: _searchController,
-      onSearchSubmitted: _onSearchSubmitted,
+      // ✅ PASAMOS EL NUEVO HEADER AQUÍ
+      filterActions: _buildFiltrosTransacciones(),
+      // El resto igual...
       currentPage: state.currentPage,
       totalPages: state.totalPages,
       onPageChanged: (page) => notifier.loadHistorial(page: page),
@@ -366,5 +384,89 @@ return {
         ),
       };
     }).toList();
+  }
+  // --- BARRA DE FILTROS PERSONALIZADA PARA TRANSACCIONES ---
+  Widget _buildFiltrosTransacciones() {
+    const Color borderColor = Color.fromARGB(255, 35, 35, 35);
+    const double borderWidth = 0.5;
+
+    return Row(
+      children: [
+        // 1. SELECTOR IZQUIERDO (CUENTAS / VENTAS)
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor, width: borderWidth),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTabButton('CUENTAS', HistorialType.cuentas),
+              _buildTabButton('VENTAS', HistorialType.ventas),
+            ],
+          ),
+        ),
+        const SizedBox(width: 15),
+        
+        // 2. DIVIDER VERTICAL SUTIL
+        Container(width: 1, height: 25, color: borderColor),
+        const SizedBox(width: 15),
+
+        // 3. BUSCADOR (RECORRIDO A LA DERECHA)
+        Expanded(
+          child: SizedBox(
+            height: 38,
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: _onSearchSubmitted,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Buscar transacción...',
+                hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 18),
+                filled: true,
+                fillColor: Colors.black,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8), 
+                  borderSide: const BorderSide(color: Color(0xFF232323))
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8), 
+                  borderSide: const BorderSide(color: Colors.white38, width: 0.5)
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Botón individual del selector
+  Widget _buildTabButton(String label, HistorialType type) {
+    bool isSelected = _selectedType == type;
+    return GestureDetector(
+      onTap: () => _switchView(type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white38,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
   }
 }

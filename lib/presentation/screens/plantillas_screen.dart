@@ -143,7 +143,7 @@ Future<void> _guardarCambios(Plantilla plantilla, TextEditingController nombreCo
         scrolledUnderElevation: 0.0,
         title: Container(
           padding: const EdgeInsets.only(top: 20),
-          child: const Text('Gestión de Plantillas', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Gestión de Plantillas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
         ),
         actions: [
           AddButton(
@@ -175,9 +175,10 @@ Future<void> _guardarCambios(Plantilla plantilla, TextEditingController nombreCo
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         decoration: BoxDecoration(
-                          color: !_mostrandoPlantillasCliente ? Colors.white : Colors.grey.shade800,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+  color: !_mostrandoPlantillasCliente ? Colors.white : const Color(0xFF111111), // Blanco si activo, Negro si no
+  borderRadius: BorderRadius.circular(8),
+  border: Border.all(color: const Color.fromARGB(255, 35, 35, 35), width: 0.5),
+),
                         child: Text(
                           'Proveedores',
                           style: TextStyle(
@@ -199,9 +200,10 @@ Future<void> _guardarCambios(Plantilla plantilla, TextEditingController nombreCo
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         decoration: BoxDecoration(
-                          color: _mostrandoPlantillasCliente ? Colors.white : Colors.grey.shade800,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+  color: _mostrandoPlantillasCliente ? Colors.white : const Color(0xFF111111), // Blanco si activo, Negro si no
+  borderRadius: BorderRadius.circular(8),
+  border: Border.all(color: const Color.fromARGB(255, 35, 35, 35), width: 0.5),
+),
                         child: Text(
                           'Clientes',
                           style: TextStyle(
@@ -493,103 +495,133 @@ void didUpdateWidget(covariant PlantillaCard oldWidget) {
     _contenidoFocusNode.dispose();
     super.dispose();
   }
-
+ 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Card( 
       margin: const EdgeInsets.only(bottom: 16),
       elevation: widget.esActiva ? 6.0 : 2.0,
-      color: Colors.grey.shade900,
+      color: const Color.fromARGB(255, 15, 15, 15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
+      color: Color.fromARGB(255, 35, 35, 35), // El mismo borde de tus tablas
+          width: 0.5,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+child: Padding(
+        padding: const EdgeInsets.all(20.0), // Un poco más de aire
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- CABECERA: TÍTULO SIN BORDES NI FONDOS ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _nombreController,
-                    focusNode: _nombreFocusNode,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Nombre de la Plantilla',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      isCollapsed: true,
-                    ),
-                    onTap: () {
-                      if (!_nombreFocusNode.hasFocus) {
-                        _nombreFocusNode.requestFocus();
-                      }
-                      // Notifica al padre: foco en campo de nombre
-                      widget.onFocus(widget.plantilla.id, _nombreController, false);
-                    },
-                  ),
-                ),
+                // --- BLOQUE DEL TÍTULO CORREGIDO ---
+Expanded(
+  child: TextFormField(
+    controller: _nombreController,
+    focusNode: _nombreFocusNode,
+    style: const TextStyle(
+      color: Colors.white, 
+      fontSize: 18, 
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5
+    ),
+    decoration: InputDecoration(
+      hintText: 'Nombre de la Plantilla',
+      hintStyle: const TextStyle(color: Colors.white24),
+      
+      // ✅ ESTO ELIMINA EL FONDO POR COMPLETO
+      filled: false, 
+      fillColor: Colors.transparent,
+      
+      // ✅ ESTO ELIMINA CUALQUIER BORDE
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      
+      isDense: true,
+      contentPadding: EdgeInsets.zero,
+    ),
+    onTap: () {
+      if (!_nombreFocusNode.hasFocus) {
+        _nombreFocusNode.requestFocus();
+      }
+      widget.onFocus(widget.plantilla.id, _nombreController, false);
+    },
+  ),
+),
+                // Icono de basura más discreto
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  icon: Icon(Icons.delete_outline, color: Colors.red.withOpacity(0.7), size: 20),
                   onPressed: () => widget.onDelete(widget.plantilla),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-TextField(
-  controller: _contenidoController,
-  focusNode: _contenidoFocusNode,
-  maxLines: 5,
-  style: const TextStyle(color: Colors.white),
-  decoration: InputDecoration(
-    hintText: 'Escribe el contenido de la plantilla...',
-    hintStyle: const TextStyle(color: Colors.white54),
-    border: const OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white30),
-    ),
-    enabledBorder: const OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white30),
-    ),
-    focusedBorder: const OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white), // 👈 BORDE BLANCO AL ENFOCAR
-    ),
-    alignLabelWithHint: true,
-  ),
+            
+            const SizedBox(height: 12),
+
+            // --- CUERPO: CAMPO DE CONTENIDO MINIMALISTA ---
+            TextField(
+              controller: _contenidoController,
+              focusNode: _contenidoFocusNode,
+              maxLines: 8,
+              style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
+              decoration: InputDecoration(
+                hintText: 'Escribe el mensaje aquí...',
+                hintStyle: const TextStyle(color: Colors.white12, fontSize: 13),
+                filled: true,
+                fillColor: Colors.black, // Negro puro fondo
+                contentPadding: const EdgeInsets.all(16),
+                
+                // BORDE GRIS FINO (Idéntico a tus tablas)
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color.fromARGB(255, 35, 35, 35), width: 0.5),
+                ),
+                
+                // BORDE BLANCO FINO AL ENFOCAR (Sin colores llamativos)
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.white38, width: 0.5),
+                ),
+                
+                alignLabelWithHint: true,
+              ),
               onTap: () {
-                if (!_contenidoFocusNode.hasFocus) {
-                  _contenidoFocusNode.requestFocus();
-                }
-                // Notifica al padre: foco en campo de contenido
+                if (!_contenidoFocusNode.hasFocus) _contenidoFocusNode.requestFocus();
                 widget.onFocus(widget.plantilla.id, _contenidoController, true);
               },
             ),
-            // Solo muestra variables si la tarjeta está activa Y el campo de contenido está activo
-            if (widget.esActiva && widget.variablesSection != null) ...[
-              const SizedBox(height: 16),
-                            _buildCheckboxesVisibilidad(), // ✅ INSERTADO AQUÍ
 
+            // --- SECCIÓN INFERIOR (Solo si está activa) ---
+            if (widget.esActiva && widget.variablesSection != null) ...[
+              const SizedBox(height: 20),
+              
+              // Título de visibilidad más pequeño y elegante
+              _buildCheckboxesVisibilidad(), 
+              
+              const SizedBox(height: 16),
+              
+              // Sección de variables
               widget.variablesSection!,
-              const SizedBox(height: 8),
+              
+              const SizedBox(height: 24),
+              
+              // Botón guardar minimalista (Blanco/Negro)
               Center(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    minimumSize: const Size(120, 40),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   ),
                   onPressed: () => widget.onSave(widget.plantilla, _nombreController, _contenidoController, _visibilidadLocal),
-                  child: const Text('Guardar'),
+                  child: const Text('GUARDAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
                 ),
               ),
             ]
