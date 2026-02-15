@@ -20,6 +20,8 @@ class Venta extends Equatable {
   final DateTime? fechaReporteVenta;
   final DateTime? createdAt; 
   final DateTime? deletedAt;
+  final String? prioridadActual;
+
 
   // ✅ 1. NUEVAS PROPIEDADES
   final bool isPaused;
@@ -42,7 +44,8 @@ class Venta extends Equatable {
     this.deletedAt,
     // ✅ 2. AGREGADAS AL CONSTRUCTOR
     this.isPaused = false, 
-    this.fechaPausa,       
+    this.fechaPausa,   
+    this.prioridadActual,
   });
 
   // ✅ 3. LÓGICA DE DÍAS RESTANTES ACTUALIZADA (CONGELA EL TIEMPO)
@@ -78,6 +81,9 @@ class Venta extends Equatable {
           numPerfiles: 0,
           perfilesDisponibles: 0,
           problemaCuenta: json['cuenta_problema'],
+                  // ✅ AQUÍ ESTÁ LA CLAVE: Mapear los datos extra de la cuenta
+        isPaused: json['cuenta_is_paused'] ?? false, 
+        prioridadActual: json['cuenta_prioridad'],
         ),
         perfilId: json['perfil_id']?.toString(),
         perfilAsignado: json['perfil_asignado']?.toString(),
@@ -101,6 +107,7 @@ class Venta extends Equatable {
         fechaPausa: json['fecha_pausa'] != null
             ? DateTime.tryParse(json['fecha_pausa'].toString())
             : null,
+        prioridadActual: json['prioridad_actual']?.toString(),
       );
     } catch (e) {
       print('🚨 [VENTA_MODEL] Error: $e');
@@ -126,6 +133,7 @@ class Venta extends Equatable {
       // ✅ 5. ENVIAR A SUPABASE
       'is_paused': isPaused,
       'fecha_pausa': fechaPausa?.toIso8601String(),
+      'prioridad_actual': prioridadActual,
     };
 
     if (createdAt != null) {
@@ -154,6 +162,7 @@ class Venta extends Equatable {
     // ✅ 6. AGREGADOS A EQUATABLE
     isPaused,
     fechaPausa,
+    prioridadActual,
   ];
 
   Venta copyWith({
@@ -175,6 +184,7 @@ class Venta extends Equatable {
     // ✅ 7. PARÁMETROS AGREGADOS AL COPYWITH
     bool? isPaused,
     DateTime? fechaPausa,
+    String? prioridadActual,
   }) {
     return Venta(
       id: id ?? this.id,
@@ -194,6 +204,7 @@ class Venta extends Equatable {
       // ✅ 8. ASIGNACIÓN FINAL
       isPaused: isPaused ?? this.isPaused,
       fechaPausa: fechaPausa ?? this.fechaPausa,
+      prioridadActual: prioridadActual ?? this.prioridadActual,
     );
   }
 }

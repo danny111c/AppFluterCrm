@@ -357,11 +357,14 @@ if (cuentasState.isLoading && cuentasState.cuentas.isEmpty) {
       'Correo': Text(cuenta.correo),
       'Contraseña': Text(cuenta.contrasena),
       'Precio Compra': Text(cuenta.costoCompra?.toStringAsFixed(2) ?? 'N/A'),
-      'Estado': Tooltip(
-        message: estadoTexto,
-        child: Text(estadoTexto,
-            style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold),
-            overflow: TextOverflow.ellipsis),
+'Estado': (cuenta.problemaCuenta != null && cuenta.problemaCuenta!.isNotEmpty)
+    ? _badgePrioridad(cuenta.problemaCuenta!, cuenta.prioridadActual, cuenta.isPaused)
+    : Text(
+        cuenta.diasRestantes <= 0 ? "EXPIRADO" : "OK",
+        style: TextStyle(
+          color: cuenta.diasRestantes <= 0 ? Colors.red[400] : Colors.green[400],
+          fontWeight: FontWeight.bold,
+        ),
       ),
 'Perfiles': Text(
   cuenta.numPerfiles == 0 
@@ -443,17 +446,39 @@ IconButton(
 IconButton(
   icon: Icon(
     Icons.shopping_cart_checkout, 
-    // Ahora solo depende de si perfilesDisponibles es mayor a 0
-    color: (cuenta.perfilesDisponibles > 0) 
+    // Si tiene cascada (fallo grave global) se pone gris. 
+    // Si solo está pausada (ej. contraseña) sigue azul.
+    color: (cuenta.perfilesDisponibles > 0 && !cuenta.tieneCascada) 
         ? Colors.blueAccent 
-        : Colors.grey[600]
+        : Colors.grey[800]
   ), 
-  tooltip: 'Vender', 
-  // Solo habilitado si queda stock (en completa será 1 o 0)
-  onPressed: (cuenta.perfilesDisponibles > 0) 
+  
+  // Tooltip explicativo
+  tooltip: cuenta.tieneCascada 
+      ? 'BLOQUEADO: Cuenta en Cascada' 
+      : (cuenta.perfilesDisponibles > 0 ? 'Vender Perfil' : 'Sin stock'),
+  
+  // LÓGICA DE NEGOCIO:
+  // Permitimos vender si hay stock Y (No tiene cascada).
+  // Esto permite vender aunque esté pausada por contraseña.
+  onPressed: (cuenta.perfilesDisponibles > 0 && !cuenta.tieneCascada) 
       ? () => _showVentaModalDesdeCuenta(cuenta) 
       : null
-),          IconButton(icon: const Icon(Icons.update, color: Colors.orange), tooltip: 'Renovar Cuenta', onPressed: () => _showRenovarCuentaModal(cuenta)),
+),          // BOTÓN RENOVAR (Con protección de Cascada)
+IconButton(
+  icon: Icon(
+    Icons.update, 
+    // Si tiene cascada se pone gris, si no, naranja normal
+    color: cuenta.tieneCascada ? Colors.grey[800] : Colors.orange
+  ),
+  tooltip: cuenta.tieneCascada 
+      ? 'BLOQUEADO: Cuenta en Cascada' 
+      : 'Renovar Cuenta',
+  // Si tiene cascada se deshabilita (null)
+  onPressed: cuenta.tieneCascada 
+      ? null 
+      : () => _showRenovarCuentaModal(cuenta),
+),
           IconButton(icon: const Icon(Icons.edit, color: Colors.blueAccent), tooltip: 'Editar', onPressed: () => _showCuentaModal(cuenta)),
           IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), tooltip: 'Eliminar', onPressed: () => _eliminarCuenta(cuenta)),
           IconButton(
@@ -545,5 +570,51 @@ IconButton(
     // ===================================
   );
 
+  }
+  // ✅ HELPER VISUAL DE PRIORIDADES
+  Widget _badgePrioridad(String texto, String? prioridad, bool pausado) {
+    Color color;
+    IconData icono;
+
+    switch (prioridad) {
+      case 'critica':
+        color = Colors.redAccent;
+        icono = Icons.local_fire_department;
+        break;
+      case 'alta':
+        color = Colors.orangeAccent;
+        icono = Icons.warning_amber_rounded;
+        break;
+      case 'media':
+        color = Colors.blueAccent;
+        icono = Icons.info_outline;
+        break;
+      default:
+        color = Colors.grey;
+        icono = Icons.notes;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(pausado ? Icons.pause_circle_filled : icono, size: 14, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              texto.toUpperCase(),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

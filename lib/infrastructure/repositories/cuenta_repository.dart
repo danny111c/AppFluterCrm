@@ -180,37 +180,35 @@ Future<void> updateCuenta(Cuenta cuenta) async {
   try {
     print('[CUENTA_REPOSITORY] Iniciando actualización de cuenta: ${cuenta.id}');
 
-    // 1. OBTENER EL ESTADO ACTUAL DE LA BASE DE DATOS (Antes de los cambios)
-    final resActual = await _supabase
-        .from('cuentas')
-        .select('num_perfiles, perfiles_disponibles')
-        .eq('id', cuenta.id!)
-        .single();
-
-    final int numPerfilesViejos = resActual['num_perfiles'];
-    final int disponiblesViejos = resActual['perfiles_disponibles'];
-    
-    // Calculamos cuántos hay vendidos realmente (si era 0, asumimos 0 vendidos para la transición)
-    final int vendidosActualmente = numPerfilesViejos == 0 ? 0 : (numPerfilesViejos - disponiblesViejos);
-
-    // 2. PREPARAR DATOS DE ACTUALIZACIÓN PARA LA TABLA 'cuentas'
+    // 1. Convertimos el objeto a JSON
     final Map<String, dynamic> cuentaData = cuenta.toJson();
 
+    // 🛡️ PROTECCIÓN DE ESTADO: Eliminamos estos campos del mapa
+    // Así Supabase NO los toca y mantiene el fallo/pausa que ya existía.
+    cuentaData.remove('problema_cuenta');
+    cuentaData.remove('fecha_reporte_cuenta');
+    cuentaData.remove('is_paused');
+    cuentaData.remove('fecha_pausa');
+    cuentaData.remove('prioridad_actual');
+    cuentaData.remove('tiene_cascada'); // Este es calculado, no se guarda
+
+    // Lógica de perfiles (mantener igual)
+    final resActual = await _supabase.from('cuentas').select('num_perfiles, perfiles_disponibles').eq('id', cuenta.id!).single();
+    final int numPerfilesViejos = resActual['num_perfiles'];
+    final int disponiblesViejos = resActual['perfiles_disponibles'];
+    final int vendidosActualmente = numPerfilesViejos == 0 ? 0 : (numPerfilesViejos - disponiblesViejos);
+
     if (cuenta.numPerfiles == 0) {
-      // Caso: La cuenta se está volviendo/manteniendo como "Completa"
       cuentaData['perfiles_disponibles'] = 1; 
     } else {
-      // Caso: La cuenta es "Por Perfiles"
       if (numPerfilesViejos == 0) {
-        // Transición: Era Completa (0) y ahora es por Perfiles (>0)
         cuentaData['perfiles_disponibles'] = cuenta.numPerfiles;
       } else {
-        // Seguía siendo por perfiles, restamos los ya vendidos al nuevo total
         cuentaData['perfiles_disponibles'] = cuenta.numPerfiles - vendidosActualmente;
       }
     }
 
-    // 3. ACTUALIZAR TABLA 'cuentas'
+    // 2. ACTUALIZAR TABLA (Ahora es seguro)
     await _supabase.from('cuentas').update(cuentaData).eq('id', cuenta.id!);
 
     // 4. SINCRONIZAR TABLA 'perfiles' (Crear o Borrar Slots)

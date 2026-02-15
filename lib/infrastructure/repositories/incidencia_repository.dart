@@ -1,88 +1,96 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase_config.dart';
 import '../../domain/models/incidencia_model.dart';
+import 'package:flutter/material.dart';
 
 class IncidenciaRepository {
   final _supabase = Supabase.instance.client;
 
-  // Obtener incidencias abiertas
   Future<List<Incidencia>> getIncidenciasAbiertas(String? ventaId, String? cuentaId) async {
     var query = _supabase.from('incidencias').select().eq('estado', 'abierta');
-
-    if (ventaId != null) {
-      query = query.eq('venta_id', ventaId);
-    } else if (cuentaId != null) {
-      query = query.eq('cuenta_id', cuentaId);
-    } else {
-      return [];
-    }
+    if (ventaId != null) query = query.eq('venta_id', ventaId);
+    else if (cuentaId != null) query = query.eq('cuenta_id', cuentaId);
+    else return [];
 
     final res = await query;
     return (res as List).map((i) => Incidencia.fromJson(i)).toList();
   }
 
-  // Crear reporte (LÓGICA CORREGIDA)
   Future<void> crearIncidencia({
     String? ventaId,
     String? cuentaId,
     required String descripcion,
     required bool pausar,
+    required String prioridad,
     bool efectoCascada = false,
   }) async {
-    
-    // 1. Insertar la incidencia en el historial (Siempre se hace)
-    await _supabase.from('incidencias').insert({
-      if (ventaId != null) 'venta_id': ventaId,
-      if (cuentaId != null) 'cuenta_id': cuentaId,
-      'descripcion': descripcion,
-      'congelar_tiempo': pausar,
-    });
+    try {
+      // 1. Insertar incidencia con flag de cascada
+      await _supabase.from('incidencias').insert({
+        if (ventaId != null) 'venta_id': ventaId,
+        if (cuentaId != null) 'cuenta_id': cuentaId,
+        'descripcion': descripcion,
+        'congelar_tiempo': pausar,
+        'prioridad': prioridad,
+        'hubo_cascada': efectoCascada,
+      });
 
-    // 2. Actualizar Tabla VENTAS
-    if (ventaId != null) {
-      // Creamos un mapa base solo con el texto (esto siempre se actualiza)
-      final Map<String, dynamic> datosActualizar = {
-        'problema_venta': descripcion, 
-      };
+      // 2. Lógica para VENTAS
+      if (ventaId != null) {
+        final Map<String, dynamic> vUpdates = {'problema_venta': descripcion, 'prioridad_actual': prioridad};
+        if (pausar) {
+          final res = await _supabase.from('ventas').select('fecha_pausa').eq('id', ventaId).single();
+          vUpdates['is_paused'] = true;
+          if (res['fecha_pausa'] == null) vUpdates['fecha_pausa'] = DateTime.now().toIso8601String();
+        }
+        await _supabase.from('ventas').update(vUpdates).eq('id', ventaId);
+      } 
+      // 3. Lógica para CUENTAS
+      else if (cuentaId != null) {
+        final Map<String, dynamic> cUpdates = {'problema_cuenta': descripcion, 'prioridad_actual': prioridad};
+        if (pausar) {
+          final res = await _supabase.from('cuentas').select('fecha_pausa').eq('id', cuentaId).single();
+          cUpdates['is_paused'] = true;
+          if (res['fecha_pausa'] == null) cUpdates['fecha_pausa'] = DateTime.now().toIso8601String();
+        }
+        await _supabase.from('cuentas').update(cUpdates).eq('id', cuentaId);
 
-      // SOLO si el usuario marcó PAUSAR, añadimos los campos de pausa
-      if (pausar) {
-        datosActualizar['is_paused'] = true;
-        datosActualizar['fecha_pausa'] = DateTime.now().toIso8601String();
+        if (efectoCascada) {
+          final String ahora = DateTime.now().toIso8601String();
+          // Solo pausar las que no tengan pausa previa para no sobreescribir el Día 1
+          await _supabase.from('ventas').update({
+            'problema_venta': descripcion,
+            'prioridad_actual': prioridad,
+            'is_paused': true,
+            'fecha_pausa': ahora,
+          }).eq('cuenta_id', cuentaId).filter('fecha_pausa', 'is', null);
+        }
       }
-      // NOTA: Si pausar es false, NO enviamos 'is_paused', así no se activa accidentalmente.
-
-      await _supabase.from('ventas').update(datosActualizar).eq('id', ventaId);
-    } 
-    
-    // 3. Actualizar Tabla CUENTAS
-    else if (cuentaId != null) {
-      // Mapa base
-      final Map<String, dynamic> datosActualizar = {
-        'problema_cuenta': descripcion,
-      };
-
-      if (pausar) {
-        datosActualizar['is_paused'] = true;
-        datosActualizar['fecha_pausa'] = DateTime.now().toIso8601String();
-      }
-
-      await _supabase.from('cuentas').update(datosActualizar).eq('id', cuentaId);
-
-      // Efecto Cascada (Solo aplica si marcaste pausar Y cascada)
-      if (pausar && efectoCascada) {
-        await _supabase.from('ventas').update({
-          'is_paused': true,
-          'fecha_pausa': DateTime.now().toIso8601String(),
-        }).eq('cuenta_id', cuentaId);
-      }
+    } catch (e) {
+      debugPrint("🚨 ERROR REPO: $e");
+      rethrow;
     }
   }
 
-  // Resolver incidencia
-  Future<void> resolverIncidencia(String incidenciaId) async {
+  // ✅ Recibe p_dias_principal y p_dias_cascada
+  Future<void> resolverIncidencia(String incidenciaId, int diasPrincipal, int diasCascada) async {
     await _supabase.rpc('resolver_incidencia_y_compensar', params: {
       'p_incidencia_id': incidenciaId,
+      'p_dias_principal': diasPrincipal,
+      'p_dias_cascada': diasCascada,
     });
   }
+ Future<void> resolverGrupoSoporte({
+  required String id,
+  required bool esCuenta,
+  required int diasP,
+  required int diasC,
+}) async {
+  await _supabase.rpc('resolver_grupo_soporte', params: {
+    'p_id_sujeto': id,
+    'p_es_cuenta': esCuenta,
+    'p_dias_principal': diasP,
+    'p_dias_cascada': diasC,
+  });
+}
 }

@@ -342,53 +342,24 @@ Widget _buildShimmerPlaceholder({double width = 100.0, double height = 16.0}) {
           'Perfil Asignado': Text(venta.perfilAsignado ?? 'N/A'),
           'Clave Perfil': Text(venta.pin ?? 'N/A'),
           'Precio Venta': Text(venta.precio.toStringAsFixed(2)),
-'Estado': Tooltip(
-  message: mensajeTooltip,
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      if (tieneFalloCuenta)
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFD32F2F), size: 12),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                'Cuenta: $falloCuenta',
-                style: const TextStyle(color: Color(0xFFD32F2F), fontSize: 11, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      if (tieneFalloVenta)
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.amber, size: 12),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                'Venta: $falloVenta',
-                style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      if (!tieneFalloCuenta && !tieneFalloVenta)
-        Text(
-          estaExpirado ? 'Expirado' : 'OK',
-          style: TextStyle(
-            color: estaExpirado ? Colors.red[400] : Colors.green[400],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-    ],
-  ),
-),
+'Estado': Builder(builder: (context) {
+  // Mostramos el badge si hay un problema, independientemente de si está pausado o no
+  if (venta.problemaVenta != null && venta.problemaVenta!.isNotEmpty) {
+    return _badgePrioridad(
+      venta.problemaVenta!, 
+      venta.prioridadActual, 
+      venta.isPaused // Aquí pasará false si no marcaste pausa, y el icono de pausa no saldrá
+    );
+  }
+
+  return Text(
+    venta.diasRestantes <= 0 ? "EXPIRADO" : "OK",
+    style: TextStyle(
+      color: venta.diasRestantes <= 0 ? Colors.red[400] : Colors.green[400],
+      fontWeight: FontWeight.bold,
+    ),
+  );
+}),
     
           'Fecha Inicio': Text(_formatDate(venta.fechaInicio)),
           // REEMPLAZA LA LÍNEA DE 'Días Restantes' EN VENTAS SCREEN CON ESTO:
@@ -555,6 +526,52 @@ return Scaffold(
             ),
           ],
         ),
+      ),
+    );
+  }
+  // ✅ HELPER VISUAL DE PRIORIDADES
+  Widget _badgePrioridad(String texto, String? prioridad, bool pausado) {
+    Color color;
+    IconData icono;
+
+    switch (prioridad) {
+      case 'critica':
+        color = Colors.redAccent;
+        icono = Icons.local_fire_department;
+        break;
+      case 'alta':
+        color = Colors.orangeAccent;
+        icono = Icons.warning_amber_rounded;
+        break;
+      case 'media':
+        color = Colors.blueAccent;
+        icono = Icons.info_outline;
+        break;
+      default:
+        color = Colors.grey;
+        icono = Icons.notes;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(pausado ? Icons.pause_circle_filled : icono, size: 14, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              texto.toUpperCase(),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

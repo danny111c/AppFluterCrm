@@ -149,7 +149,15 @@ Future<bool> updateVenta(Venta venta, {String? perfilId}) async {
     final idReal = perfilId ?? venta.perfilId;
 
     final dataToUpdate = venta.toJson();
-    dataToUpdate['perfil_id'] = idReal; // ✅ Aseguramos el vínculo
+
+    // 🛡️ PROTECCIÓN DE ESTADO: Evitamos borrar fallos al renovar venta
+    dataToUpdate.remove('problema_venta');
+    dataToUpdate.remove('fecha_reporte_venta');
+    dataToUpdate.remove('is_paused');
+    dataToUpdate.remove('fecha_pausa');
+    dataToUpdate.remove('prioridad_actual');
+    
+    dataToUpdate['perfil_id'] = idReal; 
 
     // 1. Actualizar venta
     await _supabase.from('ventas').update(dataToUpdate).eq('id', venta.id!);

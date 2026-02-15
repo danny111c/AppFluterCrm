@@ -17,13 +17,13 @@ class AppTheme {
       foregroundColor: Colors.white,
       elevation: 1,
     ),
-    colorScheme: ColorScheme.light(
+    colorScheme: const ColorScheme.light( // Agregado const para optimización
       primary: primaryColor,
       secondary: accentColor,
       surface: cardBackgroundColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onSurface: const Color.fromARGB(255, 255, 255, 255),
+      onSurface: Color.fromARGB(255, 255, 255, 255),
     ),
     textSelectionTheme: const TextSelectionThemeData(
       cursorColor: Colors.white,
@@ -31,31 +31,56 @@ class AppTheme {
       selectionHandleColor: Colors.white,
     ),
 
+    // 👇 AQUÍ ESTÁ LA MAGIA PARA QUITAR EL ZOOM EN WINDOWS 👇
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.windows: NoTransitionsBuilder(), // Sin animación
+        TargetPlatform.android: ZoomPageTransitionsBuilder(), // Android normal
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(), // iOS normal
+      },
+    ),
+    // 👆 -------------------------------------------------- 👆
+
     // Configuración de Switch en blanco y negro
     switchTheme: SwitchThemeData(
-      // Color del thumb (circulo)
       thumbColor: MaterialStateProperty.resolveWith<Color?>(
         (Set<MaterialState> states) {
           if (states.contains(MaterialState.selected)) {
-            return Colors.black; // Encendido
+            return Colors.black; 
           }
-          return Colors.white; // Apagado
+          return Colors.white; 
         },
       ),
-      // Color del track (fondo)
       trackColor: MaterialStateProperty.resolveWith<Color?>(
         (Set<MaterialState> states) {
           if (states.contains(MaterialState.selected)) {
-            return Colors.white; // Encendido
+            return Colors.white; 
           }
-          return Colors.black; // Apagado
+          return Colors.black; 
         },
       ),
     ),
   );
 
-  // Puedes añadir un darkTheme si lo necesitas
   static ThemeData darkTheme = ThemeData(
     // ... configuración tema oscuro
   );
+}
+
+// ✅ CLASE AUXILIAR PARA ELIMINAR LA ANIMACIÓN
+// (Déjala aquí mismo, al final del archivo)
+class NoTransitionsBuilder extends PageTransitionsBuilder {
+  const NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // Simplemente devuelve el hijo sin envolverlo en ninguna animación de Zoom o Fade
+    return child;
+  }
 }
