@@ -18,6 +18,8 @@ class IncidenciasNotifier extends StateNotifier<AsyncValue<List<Incidencia>>> {
       final lista = await _repo.getIncidenciasAbiertas(ventaId, cuentaId);
       state = AsyncValue.data(lista);
     } catch (e, stack) {
+            if (!mounted) return; // <--- AÑADE ESTA TAMBIÉN
+
       state = AsyncValue.error(e, stack);
     }
   }

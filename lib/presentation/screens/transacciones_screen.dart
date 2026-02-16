@@ -265,7 +265,7 @@ Widget _buildSummaryCard(String title, double amount, Color color) {
 
     return ReusableDataTablePanel(
       key: const ValueKey('ventasTable'),
-      columns: _getVentaColumns(),
+    columns: _getCuentaColumns(),         // <--- ANTES DECÍA _getCuentaColumns
       data: data,
       // ✅ PASAMOS EL NUEVO HEADER AQUÍ
       filterActions: _buildFiltrosTransacciones(),
@@ -301,7 +301,7 @@ Widget _buildSummaryCard(String title, double amount, Color color) {
 
     return ReusableDataTablePanel(
       key: const ValueKey('cuentasTable'),
-      columns: _getCuentaColumns(),
+      columns: _getVentaColumns(),
       data: data,
       // ✅ PASAMOS EL NUEVO HEADER AQUÍ
       filterActions: _buildFiltrosTransacciones(),

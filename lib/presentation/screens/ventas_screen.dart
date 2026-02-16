@@ -466,7 +466,7 @@ return Scaffold(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Gestión de Ventas', 
+                'Ventas', 
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)
               ),
               

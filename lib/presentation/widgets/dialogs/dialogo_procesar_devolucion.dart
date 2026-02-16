@@ -49,7 +49,7 @@ class _DialogoProcesarDevolucionState extends State<DialogoProcesarDevolucion> {
             const SizedBox(height: 10),
             Text('Precio original: \$${widget.montoRecibido.toStringAsFixed(2)}', 
                 style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            Text('Sugerencia prorrateada: \$${widget.sugerencia.toStringAsFixed(2)}', 
+            Text('El reembolso sugerido es: \$${widget.sugerencia.toStringAsFixed(2)}', 
                 style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             TextField(

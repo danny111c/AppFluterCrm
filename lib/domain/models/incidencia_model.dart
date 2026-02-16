@@ -37,4 +37,15 @@ class Incidencia {
       huboCascada: json['hubo_cascada'] ?? false, // ✅ Mapeo correcto
     );
   }
+    // NUEVA FUNCIÓN: Convierte una lista de incidencias en un texto punteado
+  static String formatearLista(List<Incidencia> lista) {
+    if (lista.isEmpty) return "Sin problemas reportados";
+    // Filtramos para asegurar que solo enviamos las que no están resueltas
+    final activas = lista.where((i) => i.resueltoAt == null).toList();
+    if (activas.isEmpty) return "Sin problemas reportados";
+    
+    return activas.map((i) => "• ${i.descripcion}").join("\n");
+  }
+  
+
 }

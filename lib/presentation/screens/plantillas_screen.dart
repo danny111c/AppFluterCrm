@@ -143,7 +143,7 @@ Future<void> _guardarCambios(Plantilla plantilla, TextEditingController nombreCo
         scrolledUnderElevation: 0.0,
         title: Container(
           padding: const EdgeInsets.only(top: 20),
-          child: const Text('Gestión de Plantillas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
+          child: const Text('Plantillas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31)),
         ),
         actions: [
           AddButton(

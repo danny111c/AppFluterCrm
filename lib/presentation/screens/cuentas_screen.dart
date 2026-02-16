@@ -33,6 +33,10 @@ import '../../domain/providers/plataforma_provider.dart'; // <--- AÑADE ESTA L�
 import 'package:collection/collection.dart'; // ✅ Necesario para firstWhereOrNull
 import '../../domain/models/plataforma_model.dart'; // ✅ Necesario para reconocer el tipo Plataforma
 
+// Agrega estos dos al principio de cuentas_screen.dart
+import '../../domain/models/incidencia_model.dart';
+import '../../domain/providers/incidencia_provider.dart'; // <--- Donde tengas el incidenciasFamily
+
 class CuentasScreen extends ConsumerStatefulWidget {
 
   const CuentasScreen({super.key});
@@ -472,32 +476,88 @@ if (confirmado == true) {
   }
 
 Future<void> _showDevolucionProveedorDialog(Cuenta cuenta) async {
-  final inicio = DateTime.parse(cuenta.fechaInicio!);
-  final fin = DateTime.parse(cuenta.fechaFinal!);
-  final hoy = DateTime.now();
-  final totalDias = fin.difference(inicio).inDays;
-  final diasRestantes = fin.difference(hoy).inDays;
-  
-  // Cálculo de lo que el proveedor debería devolverte por los días no usados
-  double sugerencia = (totalDias > 0 && diasRestantes > 0) ? (cuenta.costoCompra! / totalDias) * diasRestantes : 0;
+    // 1. VERIFICACIÓN DE SEGURIDAD: ¿Tiene ventas activas?
+    try {
+      final ventasCount = await _ventaRepo.getVentasCountByCuentaId(cuenta.id!);
 
-  final double? montoFinal = await showDialog<double>(
-    context: context,
-    builder: (context) => DialogoProcesarDevolucion(
-      title: 'Reembolso del Proveedor',
-      detalle: 'Se anulará la cuenta ${cuenta.correo}.',
-      montoRecibido: cuenta.costoCompra ?? 0,
-      sugerencia: sugerencia,
-      labelMonto: 'Monto recuperado (\$)',
-    ),
-  );
+      if (ventasCount > 0) {
+        if (!mounted) return;
+        
+        // 🛑 BLOQUEO: Mostramos tu ConfirmDialog personalizado
+        await showDialog(
+          context: context,
+          builder: (context) => ConfirmDialog(
+          title: 'Cuenta en uso', // Título más claro
+          message: 'No puedes devolver esta cuenta al proveedor porque todavía tiene $ventasCount clientes activos.\n\n'
+                   'Primero debes cancelar esas ventas para dejar la cuenta vacía.',
+            confirmText: 'Entendido', // Botón neutro
+            cancelText: '',           // String vacío para ocultar el botón cancelar
+          ),
+        );
+        return; // 🚨 IMPORTANTE: Esto detiene la función aquí. No sigue al reembolso.
+      }
+    } catch (e) {
+      if(mounted) NotificationService.showError(context, 'Error al verificar ventas: $e');
+      return;
+    }
 
-  if (montoFinal != null) {
-await _ventaRepo.registrarDevolucionProveedor(cuenta: cuenta, montoRecuperado: montoFinal);
-    await ref.read(cuentasProvider.notifier).deleteCuenta(cuenta);
-    NotificationService.showSuccess(context, 'Reembolso de proveedor registrado');
+    // --- SI PASA AQUÍ, ES QUE NO HAY VENTAS ACTIVAS (0) ---
+
+    // 2. CÁLCULO DE FECHAS CORREGIDO (Normalizado a las 00:00:00)
+    final fechaInicioReal = DateTime.parse(cuenta.fechaInicio!);
+    final fechaFinReal = DateTime.parse(cuenta.fechaFinal!);
+    final ahora = DateTime.now();
+
+    // Quitamos las horas/minutos para que cuente días calendario completos
+    final inicio = DateTime(fechaInicioReal.year, fechaInicioReal.month, fechaInicioReal.day);
+    final fin = DateTime(fechaFinReal.year, fechaFinReal.month, fechaFinReal.day);
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+    final totalDias = fin.difference(inicio).inDays;
+    
+    // Calculamos días usados y restantes asegurando que no den negativo
+    final diasUsados = hoy.difference(inicio).inDays;
+    int diasRestantes = totalDias - diasUsados;
+    
+    if (diasRestantes < 0) diasRestantes = 0;
+    if (diasRestantes > totalDias) diasRestantes = totalDias;
+
+    // Fórmula del reembolso sugerido
+    double sugerencia = (totalDias > 0) 
+        ? (cuenta.costoCompra! / totalDias) * diasRestantes 
+        : 0;
+
+    if (!mounted) return;
+
+    // 3. MOSTRAR DIÁLOGO DE REEMBOLSO
+    final double? montoFinal = await showDialog<double>(
+      context: context,
+      builder: (context) => DialogoProcesarDevolucion(
+        title: 'Reembolso del Proveedor',
+        detalle: 'Se registrará el monto recuperado y se eliminará la cuenta permanentemente.',
+        montoRecibido: cuenta.costoCompra ?? 0,
+        sugerencia: sugerencia, // Aquí ya llegará el valor corregido (ej. 6.0)
+        labelMonto: 'Monto recuperado (\$)',
+      ),
+    );
+
+    // 4. EJECUTAR REEMBOLSO Y ELIMINACIÓN
+    if (montoFinal != null) {
+      // Registramos el dinero
+      await _ventaRepo.registrarDevolucionProveedor(cuenta: cuenta, montoRecuperado: montoFinal);
+      
+      // Eliminamos la cuenta (ahora seguro porque sabemos que ventasCount es 0)
+      final success = await ref.read(cuentasProvider.notifier).deleteCuenta(cuenta);
+
+      if (mounted) {
+        if (success) {
+          NotificationService.showSuccess(context, 'Reembolso registrado y cuenta eliminada.');
+        } else {
+          NotificationService.showError(context, 'Error al eliminar la cuenta de la base de datos.');
+        }
+      }
+    }
   }
-}
 
   (String, Color) _getTextoYColorDeEstado(Cuenta cuenta) {
     if (cuenta.problemaCuenta != null && cuenta.problemaCuenta!.isNotEmpty) return (cuenta.problemaCuenta!, Colors.amber);
@@ -546,13 +606,32 @@ await _ventaRepo.registrarDevolucionProveedor(cuenta: cuenta, montoRecuperado: m
     }
   }
 
-  Future<void> _contactarProveedor(Cuenta cuenta) async {
+Future<void> _contactarProveedor(Cuenta cuenta) async {
     if (cuenta.proveedor.contacto.isEmpty) {
       NotificationService.showWarning(context, 'Este proveedor no tiene un número de contacto guardado.');
       return;
     }
 
-    // 1. Preparamos el mapa de datos con las variables y sus valores
+    // 1. OBTENER LAS INCIDENCIAS DIRECTAMENTE DEL REPOSITORIO
+    // Esto evita el error de "dispose" de Riverpod
+    List<Incidencia> listaIncidencias = [];
+    try {
+      // Leemos el repositorio directamente usando su provider
+      final repo = ref.read(incidenciaRepositoryProvider);
+      
+      // Llamamos a la función del repositorio (ventaId: null, cuentaId: cuenta.id)
+      listaIncidencias = await repo.getIncidenciasAbiertas(null, cuenta.id);
+    } catch (e) {
+      print("Error cargando incidencias para el mensaje: $e");
+    }
+    
+    // 2. PROCESAR EL TEXTO
+    // Si la lista está vacía, usamos el campo problemaCuenta que ya tiene el modelo Cuenta
+    String textoProblemas = listaIncidencias.isNotEmpty 
+        ? Incidencia.formatearLista(listaIncidencias) 
+        : (cuenta.problemaCuenta ?? "Sin problemas reportados");
+
+    // 3. PREPARAR EL MAPA DE DATOS PARA LA PLANTILLA
     final data = {
       '[plataforma]': cuenta.plataforma.nombre,
       '[correo]': cuenta.correo,
@@ -561,24 +640,22 @@ await _ventaRepo.registrarDevolucionProveedor(cuenta: cuenta, montoRecuperado: m
           ? DateFormat('dd-MM-yyyy').format(DateTime.parse(cuenta.fechaFinal!))
           : '(sin fecha)',
       '[proveedor]': cuenta.proveedor.nombre,
-      // ¡AÑADE ESTAS DOS LÍNEAS PARA INCLUIR LAS VARIABLES DE PROBLEMA!
-      '[problema_cuenta]': cuenta.problemaCuenta ?? 'Sin problema reportado', // Texto por defecto si es nulo
+      '[problema_cuenta]': textoProblemas, 
       '[fecha_reporte_cuenta]': cuenta.fechaReporteCuenta != null
           ? DateFormat('dd-MM-yyyy').format(cuenta.fechaReporteCuenta!)
-          : '(sin fecha de reporte)', // Texto por defecto si es nulo
+          : '(Ver incidencias)',
     };
 
-    // 2. Mostramos el modal reutilizable, pasándole los datos
+    // 4. MOSTRAR EL MODAL
+    if (!mounted) return;
     await showDialog(
       context: context,
       builder: (_) => SeleccionarMensajeModal(
         title: 'Contactar a ${cuenta.proveedor.nombre}',
         phoneNumber: cuenta.proveedor.contacto,
         dataForVariables: data,
-                tipoPlantilla: 'proveedor', // <-- AÑADE ESTA LÍNEA
-                  categoriaDestino: 'cuentas', // ✅ AÑADIDO
-
-
+        tipoPlantilla: 'proveedor',
+        categoriaDestino: 'cuentas',
       ),
     );
   }
@@ -828,7 +905,7 @@ IconButton(
 
       title: Container(
         padding: const EdgeInsets.only(top: 20),
-        child: const Text('Gestión de Cuentas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31,)),
+        child: const Text('Cuentas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 31,)),
       ),
       actions: [
         AddButton(onPressed: () => _showCuentaModal()),
